@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Our Money</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#f4f6f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e141b" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Our Money">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="login" class="login" hidden>
+  <div class="brand"><img src="icon.svg" width="40" height="40" alt="">Our Money</div>
+  <p>Sign in with the same email and password you use for Little Doses.</p>
+  <form id="login-form">
+    <label class="field">Email<input id="login-email" type="email" autocomplete="username" required></label>
+    <label class="field">Password<input id="login-password" type="password" autocomplete="current-password" required></label>
+    <p class="form-error" id="login-error" hidden></p>
+    <button class="btn primary" type="submit">Sign in</button>
+  </form>
+</div>
+<div id="start" class="startbox" hidden>
+  <div class="brand"><img src="icon.svg" width="40" height="40" alt="">Our Money</div>
+  <p>There's no budget saved for this account yet.</p>
+  <button class="btn primary" id="startBlank">Start a new budget</button>
+  <button class="signout" data-signout>Sign out</button>
+</div>
+<div id="main" hidden>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Our money</h1>
+      <div class="status" id="status">Loading your budget…</div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <div class="monthnav">
+      <button id="prev" aria-label="Previous month">‹</button>
+      <div class="label" id="monthLabel">November 2026</div>
+      <button id="next" aria-label="Next month">›</button>
+    </div>
+    <button class="signout" data-signout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="totals">
+    <div class="total in"><span class="k">Money in</span><span class="v num" id="tIn">£0</span><span class="s" id="tInS">Income you count</span></div>
+    <div class="total out"><span class="k">Money out</span><span class="v num" id="tOut">£0</span><span class="s" id="tOutS">Bills, spending money and one-offs</span></div>
+    <div class="total left" id="tLeftBox"><span class="k">Left over</span><span class="v num" id="tLeft">£0</span><span class="s" id="tLeftS">To save or spend</span></div>
+  </div>
+
+  <div class="cols">
+    <section class="card" aria-labelledby="hIn">
+      <div class="card-head"><h2 id="hIn">Money in</h2><span class="sum num" id="sumIn"></span></div>
+      <p class="hint">Tap an amount to change it. Tap Counted to leave something out of the totals.</p>
+      <div class="rows" id="incomeRows"></div>
+      <button class="add" id="addIncomeBtn">+ Add income</button>
+      <form class="addform" id="addIncomeForm" hidden>
+        <div class="line"><input type="text" id="niName" placeholder="Where it's from" required><input type="number" id="niAmt" placeholder="£ a month" step="0.01" min="0" required></div>
+        <div class="line"><button class="btn" type="submit">Add</button><button class="btn ghost" type="button" data-cancel="addIncomeForm">Cancel</button></div>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="hBills">
+      <div class="card-head"><h2 id="hBills">Bills</h2><span class="sum num" id="sumBills"></span></div>
+      <p class="hint">Paid every month. Tap an amount to change it.</p>
+      <div class="rows" id="billRows"></div>
+      <button class="add" id="addBillBtn">+ Add a bill</button>
+      <form class="addform" id="addBillForm" hidden>
+        <div class="line"><input type="text" id="nbName" placeholder="Bill" required><input type="number" id="nbAmt" placeholder="£ a month" step="0.01" min="0" required></div>
+        <div class="line"><select id="nbCat" aria-label="Category"></select></div>
+        <div class="line"><button class="btn" type="submit">Add</button><button class="btn ghost" type="button" data-cancel="addBillForm">Cancel</button></div>
+      </form>
+    </section>
+
+    <div style="display:grid; gap:16px;">
+      <section class="card" aria-labelledby="hSpend">
+        <div class="card-head"><h2 id="hSpend">Spending money</h2></div>
+        <div class="spend">
+          <div><div class="big num" id="spendAmt">£650</div><div class="hint" style="margin:0">For day-to-day spending, about <span id="spendWeek" class="num">£150</span> a week</div></div>
+          <button class="amt" id="spendEdit">Change</button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="hOne">
+        <div class="card-head"><h2 id="hOne">One-offs in <span id="oneMonth">November</span></h2><span class="sum num" id="sumOne"></span></div>
+        <p class="hint">Birthdays, Christmas and anything else that only happens in certain months.</p>
+        <div class="rows" id="oneRows"></div>
+        <button class="add" id="addOneBtn">+ Add a one-off for <span id="addOneMonth">November</span></button>
+        <form class="addform" id="addOneForm" hidden>
+          <div class="line"><input type="text" id="noName" placeholder="What it's for" required><input type="number" id="noAmt" placeholder="£" step="0.01" min="0" required></div>
+          <div class="line"><label><input type="checkbox" id="noYearly" checked> Every year</label></div>
+          <div class="line"><button class="btn" type="submit">Add</button><button class="btn ghost" type="button" data-cancel="addOneForm">Cancel</button></div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <section class="year" aria-labelledby="hYear">
+    <div class="card-head"><h2 id="hYear">Left over each month</h2><span class="hint" style="margin:0">Tap a month to see it</span></div>
+    <div class="bars" id="bars"></div>
+    <div class="yearfoot" id="yearFoot"></div>
+  </section>
+
+  <details class="more">
+    <summary>My salary</summary>
+    <div class="inner">
+      <div style="display:grid; gap:10px;">
+        <label class="field">Salary before tax (a year)<input type="number" id="pSalary" step="100" min="0"></label>
+        <label class="field">Pension you pay in (%)<input type="number" id="pPension" step="0.5" min="0" max="100"></label>
+        <label class="field">How your pension is paid
+          <select id="pType"><option>Salary sacrifice</option><option>Net pay</option><option>Relief at source</option></select>
+        </label>
+        <label class="field">Student loan and other deductions (a month)<input type="number" id="pOther" step="1" min="0"></label>
+      </div>
+      <div class="breakdown" id="payBreakdown"></div>
+    </div>
+  </details>
+</div>
+
+</div>
+<div class="pop" id="pop" role="dialog" aria-modal="true" aria-labelledby="popTitle">
+  <form class="box" id="popForm">
+    <h2 id="popTitle">Change amount</h2>
+    <input type="number" id="popAmt" step="0.01" min="0" aria-label="New amount">
+    <div class="choices" id="popChoices"></div>
+    <button class="btn ghost" type="button" id="popCancel">Cancel</button>
+  </form>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
