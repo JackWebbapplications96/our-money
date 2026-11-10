@@ -106,6 +106,40 @@
     ]);
   }
 
+  // ---- bill editor
+  const monthName = (k) => `${MONTHS[+k.slice(5, 7) - 1].slice(0, 3)} ${k.slice(0, 4)}`;
+  let editing = null;
+  (() => {
+    const ms = $("bEndMonth"), ys = $("bEndYear"), cs = $("bCat");
+    ms.appendChild(new Option("No end date", ""));
+    MONTHS.forEach((m, i) => ms.appendChild(new Option(m, String(i + 1).padStart(2, "0"))));
+    const y0 = new Date().getFullYear();
+    for (let y = y0 - 1; y <= y0 + 6; y++) ys.appendChild(new Option(String(y), String(y)));
+    CATS.forEach(c => cs.appendChild(new Option(c, c)));
+    ms.onchange = () => { ys.disabled = !ms.value; };
+  })();
+  function openBill(b) {
+    editing = b;
+    $("bName").value = b.name; $("bAmt").value = b.amount; $("bCat").value = b.category || "Other";
+    $("bEndMonth").value = b.lastMonth ? b.lastMonth.slice(5, 7) : "";
+    $("bEndYear").value = b.lastMonth ? b.lastMonth.slice(0, 4) : String(sel.y);
+    $("bEndYear").disabled = !b.lastMonth;
+    $("billPop").classList.add("open"); setTimeout(() => $("bName").focus(), 30);
+  }
+  const closeBill = () => { $("billPop").classList.remove("open"); editing = null; };
+  $("billCancel").onclick = closeBill;
+  $("billPop").addEventListener("click", e => { if (e.target.id === "billPop") closeBill(); });
+  $("billDelete").onclick = () => { const b = editing; closeBill(); change(() => { state.bills = state.bills.filter(z => z !== b); }); };
+  $("billForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const b = editing, name = $("bName").value.trim(), amt = parseFloat($("bAmt").value);
+    if (!name || isNaN(amt)) return;
+    const m = $("bEndMonth").value;
+    closeBill();
+    change(() => { b.name = name; b.amount = amt; b.category = $("bCat").value; b.lastMonth = m ? `${$("bEndYear").value}-${m}` : null; });
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeBill(); });
+
   // ---- render
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
@@ -153,8 +187,11 @@
         const ended = b.lastMonth && b.lastMonth < k;
         const row = el("div", "row" + (b.counted && !ended ? "" : " off"));
         row.style.gridTemplateColumns = "1fr auto auto auto";
-        const nm = el("div", "name", b.name);
-        if (ended) nm.appendChild(el("small", null, "Finished"));
+        const nm = el("button", "name namebtn", b.name);
+        nm.setAttribute("aria-label", `Edit ${b.name}`);
+        nm.onclick = () => openBill(b);
+        if (ended) nm.appendChild(el("small", null, `Finished (last payment ${monthName(b.lastMonth)})`));
+        else if (b.lastMonth) nm.appendChild(el("small", null, `Last payment ${monthName(b.lastMonth)}`));
         const amt = el("button", "amt", gbp(b.amount)); amt.setAttribute("aria-label", `Change ${b.name}`);
         amt.onclick = () => openPop(b.name, +b.amount, [{ label: "Save", sub: "Every month", run: v => change(() => { b.amount = v; }) }]);
         const chip = el("button", "chip" + (b.counted ? " on" : ""), b.counted ? "Counted" : "Not counted");

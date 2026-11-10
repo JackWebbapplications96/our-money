@@ -74,7 +74,7 @@
 
     <section class="card" aria-labelledby="hBills">
       <div class="card-head"><h2 id="hBills">Bills</h2><span class="sum num" id="sumBills"></span></div>
-      <p class="hint">Paid every month. Tap an amount to change it.</p>
+      <p class="hint">Paid every month. Tap a bill to edit it or set when it ends.</p>
       <div class="rows" id="billRows"></div>
       <button class="add" id="addBillBtn">+ Add a bill</button>
       <form class="addform" id="addBillForm" hidden>
@@ -129,6 +129,19 @@
   </details>
 </div>
 
+</div>
+<div class="pop" id="billPop" role="dialog" aria-modal="true" aria-labelledby="billTitle">
+  <form class="box" id="billForm">
+    <h2 id="billTitle">Edit bill</h2>
+    <label class="field">Name<input type="text" id="bName" required></label>
+    <label class="field">Amount a month (£)<input type="number" id="bAmt" step="0.01" min="0" required></label>
+    <label class="field">Category<select id="bCat"></select></label>
+    <div class="field">Last payment
+      <div class="line2"><select id="bEndMonth" aria-label="Last payment month"></select><select id="bEndYear" aria-label="Last payment year"></select></div>
+      <small>The bill stops counting after this month. Leave it as "No end date" if it carries on.</small>
+    </div>
+    <div class="line2"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="billCancel">Cancel</button><button class="btn ghost danger" type="button" id="billDelete">Delete bill</button></div>
+  </form>
 </div>
 <div class="pop" id="pop" role="dialog" aria-modal="true" aria-labelledby="popTitle">
   <form class="box" id="popForm">
