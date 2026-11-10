@@ -63,7 +63,7 @@
   <div class="cols">
     <section class="card" aria-labelledby="hIn">
       <div class="card-head"><h2 id="hIn">Money in</h2><span class="sum num" id="sumIn"></span></div>
-      <p class="hint">Tap an amount to change it. Tap Counted to leave something out of the totals.</p>
+      <p class="hint">Tap a name to edit it, or an amount to change it for a month. Tap Counted to leave something out.</p>
       <div class="rows" id="incomeRows"></div>
       <button class="add" id="addIncomeBtn">+ Add income</button>
       <form class="addform" id="addIncomeForm" hidden>
@@ -95,7 +95,7 @@
 
       <section class="card" aria-labelledby="hOne">
         <div class="card-head"><h2 id="hOne">One-offs in <span id="oneMonth">November</span></h2><span class="sum num" id="sumOne"></span></div>
-        <p class="hint">Birthdays, Christmas and anything else that only happens in certain months.</p>
+        <p class="hint">Birthdays, Christmas and anything else that only happens in certain months. Tap one to edit or move it.</p>
         <div class="rows" id="oneRows"></div>
         <button class="add" id="addOneBtn">+ Add a one-off for <span id="addOneMonth">November</span></button>
         <form class="addform" id="addOneForm" hidden>
@@ -141,6 +141,32 @@
       <small>The bill stops counting after this month. Leave it as "No end date" if it carries on.</small>
     </div>
     <div class="line2"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="billCancel">Cancel</button><button class="btn ghost danger" type="button" id="billDelete">Delete bill</button></div>
+  </form>
+</div>
+<div class="pop" id="onePop" role="dialog" aria-modal="true" aria-labelledby="oneTitle">
+  <form class="box" id="oneForm">
+    <h2 id="oneTitle">Edit one-off</h2>
+    <label class="field">What it's for<input type="text" id="oName" required></label>
+    <label class="field">Amount (£)<input type="number" id="oAmt" step="0.01" min="0" required></label>
+    <div class="field">When
+      <div class="line2"><select id="oMonth" aria-label="Month"></select><select id="oYear" aria-label="Every year or just once"></select></div>
+    </div>
+    <div class="line2"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="oneCancel">Cancel</button><button class="btn ghost danger" type="button" id="oneDelete">Delete</button></div>
+  </form>
+</div>
+<div class="pop" id="incPop" role="dialog" aria-modal="true" aria-labelledby="incTitle">
+  <form class="box" id="incForm">
+    <h2 id="incTitle">Edit income</h2>
+    <label class="field">Name<input type="text" id="iName" required></label>
+    <label class="field">Usual amount a month (£)<input type="number" id="iAmt" step="0.01" min="0"></label>
+    <small class="hint" id="iAmtHint" hidden>Worked out from your salary. Change it under My salary at the bottom of the page.</small>
+    <label class="field">Note (optional)<input type="text" id="iNote"></label>
+    <label class="check"><input type="checkbox" id="iCounted"> Count it in the totals</label>
+    <div class="field">Different amounts for some months
+      <div id="iChanges" class="chgs"></div>
+      <small>To add one, go to the month and tap the amount.</small>
+    </div>
+    <div class="line2"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="incCancel">Cancel</button><button class="btn ghost danger" type="button" id="incDelete">Delete</button></div>
   </form>
 </div>
 <div class="pop" id="pop" role="dialog" aria-modal="true" aria-labelledby="popTitle">

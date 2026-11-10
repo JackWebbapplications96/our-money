@@ -140,6 +140,76 @@
   });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeBill(); });
 
+  // ---- one-off editor
+  let editOne = null;
+  (() => {
+    MONTHS.forEach((m, i) => $("oMonth").appendChild(new Option(m, String(i + 1))));
+    const y0 = new Date().getFullYear();
+    $("oYear").appendChild(new Option("Every year", ""));
+    for (let y = y0 - 1; y <= y0 + 5; y++) $("oYear").appendChild(new Option(`Just ${y}`, String(y)));
+  })();
+  function openOne(o) {
+    editOne = o;
+    $("oName").value = o.name; $("oAmt").value = o.amount;
+    $("oMonth").value = String(o.month); $("oYear").value = o.year ? String(o.year) : "";
+    $("onePop").classList.add("open"); setTimeout(() => $("oName").focus(), 30);
+  }
+  const closeOne = () => { $("onePop").classList.remove("open"); editOne = null; };
+  $("oneCancel").onclick = closeOne;
+  $("onePop").addEventListener("click", e => { if (e.target.id === "onePop") closeOne(); });
+  $("oneDelete").onclick = () => { const o = editOne; closeOne(); change(() => { state.oneoffs = state.oneoffs.filter(z => z !== o); }); };
+  $("oneForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const o = editOne, name = $("oName").value.trim(), amt = parseFloat($("oAmt").value);
+    if (!name || isNaN(amt)) return;
+    closeOne();
+    change(() => { o.name = name; o.amount = amt; o.month = +$("oMonth").value; o.year = $("oYear").value ? +$("oYear").value : null; });
+  });
+
+  // ---- income editor
+  let editInc = null;
+  function drawChanges() {
+    const box = $("iChanges"); box.innerHTML = "";
+    const list = editInc.changes || [];
+    if (!list.length) { box.appendChild(el("div", "empty", "No month-by-month changes.")); return; }
+    list.forEach((c, idx) => {
+      const r = el("div", "chg");
+      const when = c.to === c.from ? monthName(c.from) : c.to ? `${monthName(c.from)} to ${monthName(c.to)}` : `From ${monthName(c.from)}`;
+      r.append(el("span", null, when), el("b", "num", gbp(c.amount)));
+      const x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", `Remove change for ${when}`);
+      x.onclick = () => { list.splice(idx, 1); drawChanges(); };
+      r.appendChild(x); box.appendChild(r);
+    });
+  }
+  function openInc(i) {
+    editInc = i;
+    $("iName").value = i.name; $("iNote").value = i.note || "";
+    const auto = i.auto === "salary";
+    $("iAmt").value = auto ? Math.round(pay(state.pay).take * 100) / 100 : i.amount;
+    $("iAmt").disabled = auto; $("iAmtHint").hidden = !auto;
+    $("iCounted").checked = !!i.counted;
+    $("incDelete").hidden = auto;
+    editInc._changesBefore = JSON.stringify(i.changes || []);
+    drawChanges();
+    $("incPop").classList.add("open"); setTimeout(() => $("iName").focus(), 30);
+  }
+  const closeInc = (keep) => {
+    if (editInc && !keep) editInc.changes = JSON.parse(editInc._changesBefore);
+    if (editInc) delete editInc._changesBefore;
+    $("incPop").classList.remove("open"); editInc = null;
+  };
+  $("incCancel").onclick = () => closeInc(false);
+  $("incPop").addEventListener("click", e => { if (e.target.id === "incPop") closeInc(false); });
+  $("incDelete").onclick = () => { const i = editInc; closeInc(true); change(() => { state.incomes = state.incomes.filter(z => z !== i); }); };
+  $("incForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const i = editInc, name = $("iName").value.trim(), amt = parseFloat($("iAmt").value);
+    if (!name || (!i.auto && isNaN(amt))) return;
+    closeInc(true);
+    change(() => { i.name = name; i.note = $("iNote").value.trim(); i.counted = $("iCounted").checked; if (!i.auto) i.amount = amt; });
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { if (editOne) closeOne(); if (editInc) closeInc(false); } });
+
   // ---- render
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
@@ -162,7 +232,8 @@
     state.incomes.forEach(i => {
       const a = amountFor(i, k), base = i.auto === "salary" ? pay(state.pay).take : +i.amount || 0;
       const row = el("div", "row" + (i.counted ? "" : " off"));
-      const nm = el("div", "name", i.name);
+      const nm = el("button", "name namebtn", i.name); nm.setAttribute("aria-label", `Edit ${i.name}`);
+      nm.onclick = () => openInc(i);
       if (Math.abs(a - base) > 0.005) { const t = el("span", "tag", "this month"); nm.appendChild(t); }
       if (i.note) nm.appendChild(el("small", null, i.note));
       const amt = el("button", "amt", gbp(a)); amt.setAttribute("aria-label", `Change ${i.name}`);
@@ -213,7 +284,9 @@
     if (!ones.length) orow.appendChild(el("div", "empty", `Nothing planned for ${mName}.`));
     ones.forEach(o => {
       const row = el("div", "row"); row.style.gridTemplateColumns = "1fr auto auto";
-      const nm = el("div", "name", o.name); nm.appendChild(el("small", null, o.year ? `Just ${o.year}` : "Every year"));
+      const nm = el("button", "name namebtn", o.name); nm.setAttribute("aria-label", `Edit ${o.name}`);
+      nm.onclick = () => openOne(o);
+      nm.appendChild(el("small", null, o.year ? `Just ${MONTHS[o.month - 1]} ${o.year}` : `Every ${MONTHS[o.month - 1]}`));
       const amt = el("button", "amt", gbp(o.amount)); amt.onclick = () => openPop(o.name, +o.amount, [{ label: "Save", run: v => change(() => { o.amount = v; }) }]);
       const x = el("button", "x", "×"); x.setAttribute("aria-label", `Remove ${o.name}`);
       x.onclick = () => change(() => { state.oneoffs = state.oneoffs.filter(z => z !== o); });
