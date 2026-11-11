@@ -218,6 +218,94 @@
   });
   document.addEventListener("keydown", e => { if (e.key === "Escape") { if (editOne) closeOne(); if (editInc) closeInc(false); } });
 
+  // ---- savings goals
+  const todayKey = () => { const d = new Date(); return key(d.getFullYear(), d.getMonth() + 1); };
+  const putInMonth = (k) => state.goals.reduce((t, g) => t + (g.log || []).filter(l => l.month === k).reduce((a, l) => a + +l.amount, 0), 0);
+  function goalPlan() {
+    // Simulate future months: each month a share of what's left goes to goals, in order.
+    const rem = state.goals.map(g => Math.max(0, (+g.target || 0) - (+g.saved || 0)));
+    const done = state.goals.map((g, i) => (rem[i] <= 0.005 ? "done" : null));
+    const now = new Date(); let cur = { y: now.getFullYear(), m: now.getMonth() + 1 };
+    const pct = (+state.savePct || 0) / 100;
+    for (let n = 0; n < 240 && done.some(d => !d); n++) {
+      const k = key(cur.y, cur.m);
+      let pot = Math.max(0, monthTotals(cur.y, cur.m).left * pct);
+      if (n === 0) pot = Math.max(0, pot - putInMonth(k));
+      for (let i = 0; i < rem.length && pot > 0.005; i++) {
+        if (done[i]) continue;
+        const use = Math.min(pot, rem[i]); rem[i] -= use; pot -= use;
+        if (rem[i] <= 0.005) done[i] = k;
+      }
+      cur = addMonths(cur.y, cur.m, 1);
+    }
+    return done;
+  }
+  let editGoal = null;
+  function openGoal(g) {
+    editGoal = g;
+    $("gTitle").textContent = g ? "Edit goal" : "New goal";
+    $("gName").value = g ? g.name : ""; $("gKind").value = g ? g.kind : "save";
+    $("gTarget").value = g ? g.target : ""; $("gSaved").value = g ? g.saved : 0;
+    $("goalDelete").hidden = !g;
+    $("goalPop").classList.add("open"); setTimeout(() => $("gName").focus(), 30);
+  }
+  const closeGoal = () => { $("goalPop").classList.remove("open"); editGoal = null; };
+  $("goalCancel").onclick = closeGoal;
+  $("goalPop").addEventListener("click", e => { if (e.target.id === "goalPop") closeGoal(); });
+  $("goalDelete").onclick = () => { const g = editGoal; closeGoal(); change(() => { state.goals = state.goals.filter(z => z !== g); }); };
+  $("goalForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("gName").value.trim(), target = parseFloat($("gTarget").value), saved = parseFloat($("gSaved").value) || 0;
+    if (!name || isNaN(target)) return;
+    const g = editGoal; closeGoal();
+    change(() => {
+      if (g) Object.assign(g, { name, kind: $("gKind").value, target, saved });
+      else state.goals.push({ id: uid(), name, kind: $("gKind").value, target, saved, log: [] });
+    });
+  });
+  $("addGoalBtn").onclick = () => openGoal(null);
+  $("savePct").addEventListener("change", e => change(() => { state.savePct = Math.min(100, Math.max(0, +e.target.value || 0)); }));
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && $("goalPop").classList.contains("open")) closeGoal(); });
+
+  function renderGoals(T) {
+    const pct = +state.savePct || 0;
+    $("savePct").value = pct; $("bufPct").textContent = `${100 - pct}%`;
+    const left = Math.max(0, T.left), toGoals = left * pct / 100, spare = left - toGoals;
+    const mName = MONTHS[sel.m - 1];
+    $("goalSplit").innerHTML = "";
+    const a = el("div", "split"); a.append(el("span", null, "Towards goals"), el("b", "num", gbp(toGoals, 0)));
+    const b = el("div", "split"); b.append(el("span", null, "Keep spare"), el("b", "num", gbp(spare, 0)));
+    $("goalSplit").append(a, b);
+    $("goalSplitNote").textContent = T.left > 0
+      ? `Based on ${gbp(T.left, 0)} left over in ${mName}. If the spare isn't needed, add it to a goal at the end of the month.`
+      : `Nothing left over in ${mName}, so nothing to put towards goals.`;
+    const list = $("goalRows"); list.innerHTML = "";
+    if (!state.goals.length) list.appendChild(el("div", "empty", "No goals yet. Add debts to clear first, then things you're saving for."));
+    const plan = goalPlan();
+    state.goals.forEach((g, i) => {
+      const saved = +g.saved || 0, target = +g.target || 0, p = target ? Math.min(1, saved / target) : 0;
+      const row = el("div", "goal" + (g.kind === "debt" ? " debt" : ""));
+      const top = el("div", "goal-top");
+      const nm = el("button", "name namebtn", g.name); nm.onclick = () => openGoal(g);
+      nm.appendChild(el("small", null, g.kind === "debt" ? "Paying off" : "Saving up"));
+      const by = plan[i] === "done" ? "Done" : plan[i] ? `On track for ${monthName(plan[i])}` : "Over 20 years away";
+      const eta = el("span", "eta" + (plan[i] === "done" ? " ok" : ""), by);
+      const ctr = el("div", "goal-ctrls");
+      const add = el("button", "chip on", g.kind === "debt" ? "+ Pay" : "+ Add");
+      add.onclick = () => openPop(`${g.kind === "debt" ? "Pay towards" : "Add to"} ${g.name}`, Math.min(toGoals || 0, Math.max(0, target - saved)), [
+        { label: g.kind === "debt" ? "Record payment" : "Add to savings", sub: "Counts as this month's goal money", run: v => change(() => { g.saved = saved + v; (g.log ||= []).push({ month: todayKey(), amount: v }); }) },
+      ]);
+      ctr.appendChild(add);
+      if (i > 0) { const up = el("button", "x", "↑"); up.setAttribute("aria-label", `Move ${g.name} up`); up.onclick = () => change(() => { const s = state.goals; [s[i - 1], s[i]] = [s[i], s[i - 1]]; }); ctr.appendChild(up); }
+      top.append(nm, eta, ctr);
+      const bar = el("div", "gbar"); const fill = el("div", "gfill"); fill.style.width = `${p * 100}%`; bar.appendChild(fill);
+      const meta = el("div", "goal-meta");
+      meta.append(el("span", "num", g.kind === "debt" ? `${gbp(saved, 0)} paid of ${gbp(target, 0)}` : `${gbp(saved, 0)} of ${gbp(target, 0)}`),
+                  el("span", "num", saved >= target ? "Complete" : `${gbp(target - saved, 0)} to go`));
+      row.append(top, bar, meta); list.appendChild(row);
+    });
+  }
+
   // ---- render
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
@@ -319,6 +407,7 @@
     });
     $("sumOne").textContent = ones.length ? gbp(T.ones, 0) : "";
 
+    renderGoals(T);
     // year strip
     const start = { y: +state.start.slice(0, 4), m: +state.start.slice(5, 7) };
     const months = Array.from({ length: 12 }, (_, i) => addMonths(start.y, start.m, i));
@@ -377,7 +466,7 @@
   const show = (id) => ["login", "start", "main"].forEach(x => { $(x).hidden = x !== id; });
   function useState(s) {
     state = s; state.start ||= key(sel.y, sel.m);
-    state.incomes ||= []; state.bills ||= []; state.oneoffs ||= []; state.extras ||= [];
+    state.incomes ||= []; state.bills ||= []; state.oneoffs ||= []; state.extras ||= []; state.goals ||= []; if (state.savePct == null) state.savePct = 75;
     state.spending ||= { id: "spend", name: "Spending money", amount: 0, changes: [] };
     state.pay ||= { salary: 0, pensionPct: 0, pensionType: "Salary sacrifice", otherMonthly: 0 };
     const st = { y: +state.start.slice(0, 4), m: +state.start.slice(5, 7) };

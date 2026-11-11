@@ -115,6 +115,17 @@
     </div>
   </div>
 
+  <section class="card goals" aria-labelledby="hGoals">
+    <div class="card-head"><h2 id="hGoals">Savings goals</h2>
+      <label class="pct">Save <input type="number" id="savePct" min="0" max="100" step="5" aria-label="Percent of left over to save"> % of what's left, keep <span id="bufPct">25%</span> spare</label>
+    </div>
+    <div class="goal-split" id="goalSplit"></div>
+    <p class="hint" id="goalSplitNote"></p>
+    <div class="goal-list" id="goalRows"></div>
+    <p class="hint">Goals are filled in order from the top. Use ↑ to change the order, and tap a goal to edit it.</p>
+    <button class="add" id="addGoalBtn">+ Add a goal</button>
+  </section>
+
   <section class="year" aria-labelledby="hYear">
     <div class="card-head"><h2 id="hYear">Left over each month</h2><span class="hint" style="margin:0">Tap a month to see it</span></div>
     <div class="bars" id="bars"></div>
@@ -176,6 +187,16 @@
       <small>To add one, go to the month and tap the amount.</small>
     </div>
     <div class="line2"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="incCancel">Cancel</button><button class="btn ghost danger" type="button" id="incDelete">Delete</button></div>
+  </form>
+</div>
+<div class="pop" id="goalPop" role="dialog" aria-modal="true" aria-labelledby="gTitle">
+  <form class="box" id="goalForm">
+    <h2 id="gTitle">New goal</h2>
+    <label class="field">Name<input type="text" id="gName" placeholder="e.g. Credit card" required></label>
+    <label class="field">Type<select id="gKind"><option value="debt">Paying off a debt</option><option value="save">Saving up for something</option></select></label>
+    <label class="field">Amount needed (£)<input type="number" id="gTarget" step="0.01" min="0" required></label>
+    <label class="field">Paid or saved so far (£)<input type="number" id="gSaved" step="0.01" min="0"></label>
+    <div class="line2"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="goalCancel">Cancel</button><button class="btn ghost danger" type="button" id="goalDelete">Delete</button></div>
   </form>
 </div>
 <div class="pop" id="pop" role="dialog" aria-modal="true" aria-labelledby="popTitle">
