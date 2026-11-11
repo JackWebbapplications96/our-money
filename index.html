@@ -65,10 +65,18 @@
       <div class="card-head"><h2 id="hIn">Money in</h2><span class="sum num" id="sumIn"></span></div>
       <p class="hint">Tap a name to edit it, or an amount to change it for a month. Tap Counted to leave something out.</p>
       <div class="rows" id="incomeRows"></div>
-      <button class="add" id="addIncomeBtn">+ Add income</button>
+      <button class="add" id="addIncomeBtn">+ Add regular income</button>
       <form class="addform" id="addIncomeForm" hidden>
         <div class="line"><input type="text" id="niName" placeholder="Where it's from" required><input type="number" id="niAmt" placeholder="£ a month" step="0.01" min="0" required></div>
         <div class="line"><button class="btn" type="submit">Add</button><button class="btn ghost" type="button" data-cancel="addIncomeForm">Cancel</button></div>
+      </form>
+      <div class="cat" id="extraHead" hidden>Extra this month</div>
+      <div class="rows" id="extraRows"></div>
+      <button class="add" id="addExtraBtn">+ Add one-off income for <span id="addExtraMonth">November</span></button>
+      <form class="addform" id="addExtraForm" hidden>
+        <div class="line"><input type="text" id="neName" placeholder="What it is, e.g. Back pay" required><input type="number" id="neAmt" placeholder="£" step="0.01" min="0" required></div>
+        <div class="line"><label><input type="checkbox" id="neYearly"> Every year (e.g. an annual bonus)</label></div>
+        <div class="line"><button class="btn" type="submit">Add</button><button class="btn ghost" type="button" data-cancel="addExtraForm">Cancel</button></div>
       </form>
     </section>
 
@@ -151,6 +159,7 @@
     <div class="field">When
       <div class="line2"><select id="oMonth" aria-label="Month"></select><select id="oYear" aria-label="Every year or just once"></select></div>
     </div>
+    <label class="check" id="oCountedRow" hidden><input type="checkbox" id="oCounted"> Count it in the totals</label>
     <div class="line2"><button class="btn" type="submit">Save</button><button class="btn ghost" type="button" id="oneCancel">Cancel</button><button class="btn ghost danger" type="button" id="oneDelete">Delete</button></div>
   </form>
 </div>

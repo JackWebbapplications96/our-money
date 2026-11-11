@@ -164,3 +164,8 @@ select:disabled { opacity: 0.5; }
 .chgs { display: grid; gap: 4px; }
 .chg { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 8px; background: var(--soft); color: var(--ink); font-size: 14px; }
 .box { max-height: calc(100vh - 32px); overflow-y: auto; }
+@media (max-width: 560px) {
+  .amt { min-width: 0; padding: 4px; }
+  .chip { padding: 2px 6px; }
+  .row { gap: 6px; }
+}

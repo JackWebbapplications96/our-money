@@ -48,14 +48,18 @@
   }
   function monthTotals(y, m) {
     const k = key(y, m);
-    const inc = state.incomes.filter(i => i.counted).reduce((t, i) => t + amountFor(i, k), 0);
-    const uncounted = state.incomes.filter(i => !i.counted).reduce((t, i) => t + amountFor(i, k), 0);
+    const ex = extrasFor(y, m);
+    const extra = ex.filter(o => o.counted !== false).reduce((t, o) => t + (+o.amount || 0), 0);
+    const inc = state.incomes.filter(i => i.counted).reduce((t, i) => t + amountFor(i, k), 0) + extra;
+    const uncounted = state.incomes.filter(i => !i.counted).reduce((t, i) => t + amountFor(i, k), 0)
+      + ex.filter(o => o.counted === false).reduce((t, o) => t + (+o.amount || 0), 0);
     const bills = state.bills.filter(b => b.counted && (!b.lastMonth || b.lastMonth >= k)).reduce((t, b) => t + (+b.amount || 0), 0);
     const spend = amountFor(state.spending, k);
     const ones = oneOffsFor(y, m).reduce((t, o) => t + (+o.amount || 0), 0);
     const out = bills + spend + ones;
     return { inc, uncounted, bills, spend, ones, out, left: inc - out };
   }
+  const extrasFor = (y, m) => (state.extras || []).filter(o => +o.month === m && (!o.year || +o.year === y));
   const oneOffsFor = (y, m) => state.oneoffs.filter(o => +o.month === m && (!o.year || +o.year === y));
 
   // ---- saving
@@ -141,15 +145,18 @@
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeBill(); });
 
   // ---- one-off editor
-  let editOne = null;
+  let editOne = null, editOneList = "oneoffs";
   (() => {
     MONTHS.forEach((m, i) => $("oMonth").appendChild(new Option(m, String(i + 1))));
     const y0 = new Date().getFullYear();
     $("oYear").appendChild(new Option("Every year", ""));
     for (let y = y0 - 1; y <= y0 + 5; y++) $("oYear").appendChild(new Option(`Just ${y}`, String(y)));
   })();
-  function openOne(o) {
-    editOne = o;
+  function openOne(o, list = "oneoffs") {
+    editOne = o; editOneList = list;
+    $("oneTitle").textContent = list === "extras" ? "Edit one-off income" : "Edit one-off";
+    $("oCountedRow").hidden = list !== "extras";
+    $("oCounted").checked = o.counted !== false;
     $("oName").value = o.name; $("oAmt").value = o.amount;
     $("oMonth").value = String(o.month); $("oYear").value = o.year ? String(o.year) : "";
     $("onePop").classList.add("open"); setTimeout(() => $("oName").focus(), 30);
@@ -157,13 +164,14 @@
   const closeOne = () => { $("onePop").classList.remove("open"); editOne = null; };
   $("oneCancel").onclick = closeOne;
   $("onePop").addEventListener("click", e => { if (e.target.id === "onePop") closeOne(); });
-  $("oneDelete").onclick = () => { const o = editOne; closeOne(); change(() => { state.oneoffs = state.oneoffs.filter(z => z !== o); }); };
+  $("oneDelete").onclick = () => { const o = editOne; closeOne(); const l = editOneList; change(() => { state[l] = state[l].filter(z => z !== o); }); };
   $("oneForm").addEventListener("submit", e => {
     e.preventDefault();
-    const o = editOne, name = $("oName").value.trim(), amt = parseFloat($("oAmt").value);
+    const o = editOne, l = editOneList, name = $("oName").value.trim(), amt = parseFloat($("oAmt").value);
     if (!name || isNaN(amt)) return;
+    const counted = $("oCounted").checked;
     closeOne();
-    change(() => { o.name = name; o.amount = amt; o.month = +$("oMonth").value; o.year = $("oYear").value ? +$("oYear").value : null; });
+    change(() => { o.name = name; o.amount = amt; o.month = +$("oMonth").value; o.year = $("oYear").value ? +$("oYear").value : null; if (l === "extras") o.counted = counted; });
   });
 
   // ---- income editor
@@ -245,6 +253,23 @@
       else row.style.gridTemplateColumns = "1fr auto auto 26px", row.append(el("span"));
       ir.appendChild(row);
     });
+    const exr = $("extraRows"); exr.innerHTML = "";
+    const exs = extrasFor(sel.y, sel.m);
+    $("extraHead").hidden = !exs.length;
+    exs.forEach(o => {
+      const off = o.counted === false;
+      const row = el("div", "row" + (off ? " off" : "")); row.style.gridTemplateColumns = "1fr auto auto auto";
+      const nm = el("button", "name namebtn", o.name); nm.setAttribute("aria-label", `Edit ${o.name}`);
+      nm.onclick = () => openOne(o, "extras");
+      nm.appendChild(el("small", null, o.year ? `Just ${MONTHS[o.month - 1]} ${o.year}` : `Every ${MONTHS[o.month - 1]}`));
+      const amt = el("button", "amt", gbp(o.amount)); amt.onclick = () => openOne(o, "extras");
+      const chip = el("button", "chip" + (off ? "" : " on"), off ? "Not counted" : "Counted");
+      chip.onclick = () => change(() => { o.counted = off; });
+      const x = el("button", "x", "×"); x.setAttribute("aria-label", `Remove ${o.name}`);
+      x.onclick = () => change(() => { state.extras = state.extras.filter(z => z !== o); });
+      row.append(nm, amt, chip, x); exr.appendChild(row);
+    });
+    $("addExtraMonth").textContent = mName;
     $("sumIn").textContent = gbp(T.inc, 0);
 
     // bills
@@ -340,6 +365,8 @@
   document.querySelectorAll("[data-cancel]").forEach(b => b.onclick = () => toggleForm(b.dataset.cancel, false));
   CATS.forEach(c => { const o = document.createElement("option"); o.textContent = c; $("nbCat").appendChild(o); });
   $("addIncomeForm").addEventListener("submit", e => { e.preventDefault(); change(() => state.incomes.push({ id: uid(), name: $("niName").value.trim(), amount: +$("niAmt").value, counted: true, changes: [] })); e.target.reset(); toggleForm("addIncomeForm", false); });
+  $("addExtraBtn").onclick = () => toggleForm("addExtraForm", true);
+  $("addExtraForm").addEventListener("submit", e => { e.preventDefault(); change(() => (state.extras ||= []).push({ id: uid(), month: sel.m, year: $("neYearly").checked ? null : sel.y, name: $("neName").value.trim(), amount: +$("neAmt").value, counted: true })); e.target.reset(); toggleForm("addExtraForm", false); });
   $("addBillForm").addEventListener("submit", e => { e.preventDefault(); change(() => state.bills.push({ id: uid(), name: $("nbName").value.trim(), category: $("nbCat").value, amount: +$("nbAmt").value, counted: true })); e.target.reset(); toggleForm("addBillForm", false); });
   $("addOneForm").addEventListener("submit", e => { e.preventDefault(); change(() => state.oneoffs.push({ id: uid(), month: sel.m, year: $("noYearly").checked ? null : sel.y, name: $("noName").value.trim(), amount: +$("noAmt").value })); e.target.reset(); $("noYearly").checked = true; toggleForm("addOneForm", false); });
   $("spendEdit").onclick = () => editMonthly(state.spending, "Spending money");
@@ -350,7 +377,7 @@
   const show = (id) => ["login", "start", "main"].forEach(x => { $(x).hidden = x !== id; });
   function useState(s) {
     state = s; state.start ||= key(sel.y, sel.m);
-    state.incomes ||= []; state.bills ||= []; state.oneoffs ||= [];
+    state.incomes ||= []; state.bills ||= []; state.oneoffs ||= []; state.extras ||= [];
     state.spending ||= { id: "spend", name: "Spending money", amount: 0, changes: [] };
     state.pay ||= { salary: 0, pensionPct: 0, pensionType: "Salary sacrifice", otherMonthly: 0 };
     const st = { y: +state.start.slice(0, 4), m: +state.start.slice(5, 7) };
